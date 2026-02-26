@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Base: deja que Tailwind mande */
+:root {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Quita el flex del body (eso era del template de Vite) */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+/* Opcional: evita que imágenes se desborden */
+img {
+  max-width: 100%;
+  height: auto;
+}
