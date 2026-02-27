@@ -30,8 +30,11 @@ export function LoginPage() {
     setErr(null);
     setLoading(true);
     try {
-      await login(emailTrim, password);
-      nav("/", { replace: true });
+      const u = await login(emailTrim, password);
+
+      // ✅ redirección por rol
+      const role = u.rol ?? "tecnico";
+      nav(role === "admin" ? "/admin" : "/tecnico", { replace: true });
     } catch (e: any) {
       setErr(e?.message ?? "No se pudo iniciar sesión");
     } finally {
@@ -160,14 +163,14 @@ export function LoginPage() {
                   )}
 
                   <button
-                    className="group relative w-full overflow-hidden rounded-xl bg-[#db9000] px-4 py-3 font-semibold text-black transition hover:bg-[#c98200] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group relative w-full overflow-hidden rounded-xl bg-[#db9000] px-4 py-3 font-semibold text-black transition hover:bg-[#c98200] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#db9000]/50 disabled:cursor-not-allowed disabled:bg-[#6b4a00] disabled:text-white/60 disabled:opacity-100"
                     disabled={!canSubmit || loading}
                     type="submit"
                   >
                     <span className="relative z-10">
                       {loading ? "Entrando..." : "Entrar"}
                     </span>
-                    <span className="absolute inset-0 opacity-0 transition group-hover:opacity-100">
+                    <span className="absolute inset-0 opacity-0 transition group-hover:opacity-100 group-disabled:hidden">
                       <span className="absolute -left-20 top-0 h-full w-40 rotate-12 bg-white/25 blur-md" />
                     </span>
                   </button>

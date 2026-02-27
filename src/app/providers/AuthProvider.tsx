@@ -9,7 +9,7 @@ import { authEvents } from "../../infrastructure/http/authEvents";
 type AuthState = {
   user: User | null;
   isLoading: boolean;
-  login(email: string, password: string): Promise<void>;
+  login(email: string, password: string): Promise<User>;
   logout(): Promise<void>;
   refresh(): Promise<void>;
 };
@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function login(email: string, password: string) {
     const session = await loginUC.execute(email, password);
     setUser(session.user);
+    return session.user;
   }
 
   async function logout() {
