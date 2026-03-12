@@ -1,7 +1,12 @@
 import type { AuthRepository } from "../../domain/repositories/auth.repository";
 
 export class LogoutUseCase {
-  constructor(private readonly repo: AuthRepository) {}
+  private readonly repo: AuthRepository;
+
+  constructor(repo: AuthRepository) {
+    this.repo = repo;
+  }
+
   execute() {
     return this.repo.logout();
   }

@@ -6,21 +6,49 @@ export function TecnicoPanelPage() {
 
   return (
     <AppShell title="Panel Técnico" role="tecnico">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card title="Hoy" value="Agenda pendiente" />
-        <Card title="Rol" value={(user?.rol ?? "tecnico").toUpperCase()} />
-        <Card title="Pendiente" value="Agenda / Tickets" />
-        <Card title="Siguiente" value="Reportes" />
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-3xl border border-white/10 bg-[#101010] p-5">
+            <div className="text-sm text-white/50">Hoy</div>
+            <div className="mt-2 text-lg font-semibold text-white">
+              Agenda pendiente
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-[#101010] p-5">
+            <div className="text-sm text-white/50">Rol</div>
+            <div className="mt-2 text-lg font-semibold text-white uppercase">
+              TÉCNICO
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-[#101010] p-5">
+            <div className="text-sm text-white/50">Usuario</div>
+            <div className="mt-2 text-lg font-semibold text-white">
+              {user?.nombre ?? "-"}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-[#101010] p-5">
+            <div className="text-sm text-white/50">Correo</div>
+            <div className="mt-2 break-all text-sm font-medium text-white">
+              {user?.email ?? "-"}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-[#101010] p-6">
+          <div className="text-sm uppercase tracking-[0.16em] text-[#db9700]">
+            Dashboard Técnico
+          </div>
+          <h2 className="mt-2 text-xl font-semibold text-white">
+            Vista operativa
+          </h2>
+          <p className="mt-2 text-white/65">
+            Aquí irá la lógica del dashboard para técnicos.
+          </p>
+        </div>
       </div>
     </AppShell>
-  );
-}
-
-function Card(props: { title: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-      <div className="text-xs text-white/55">{props.title}</div>
-      <div className="mt-1 text-sm font-semibold text-white/90">{props.value}</div>
-    </div>
   );
 }

@@ -1,20 +1,13 @@
 import { useAuth } from "../../app/providers/AuthProvider";
+import { AdminPanelPage } from "./admin/AdminPanelPage";
+import { TecnicoPanelPage } from "./tecnico/TecnicoPanelPage";
 
 export function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
-  return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <div className="rounded-md border p-4">
-        <div className="text-sm text-gray-600">Sesión activa</div>
-        <div className="font-mono text-sm">uid: {user?.id}</div>
-        <div className="text-sm">email: {user?.email ?? "-"}</div>
-      </div>
+  if (!user) {
+    return null;
+  }
 
-      <button className="rounded-md border px-4 py-2" onClick={logout}>
-        Cerrar sesión
-      </button>
-    </div>
-  );
+  return user.rol === "admin" ? <AdminPanelPage /> : <TecnicoPanelPage />;
 }

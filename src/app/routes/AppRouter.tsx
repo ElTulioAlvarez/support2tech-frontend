@@ -1,32 +1,33 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "../providers/AuthProvider";
 import { LoginPage } from "../../presentation/pages/LoginPage";
-import { AdminPanelPage } from "../../presentation/pages/admin/AdminPanelPage";
-import { TecnicoPanelPage } from "../../presentation/pages/tecnico/TecnicoPanelPage";
+import { DashboardPage } from "../../presentation/pages/DashboardPage";
+import type { ReactNode } from "react";
 
-function RequireAuth({ children }: { children: JSX.Element }) {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) return <div style={{ padding: 16 }}>Cargando...</div>;
-  if (!user) return <Navigate to="/login" replace />;
-  return children;
+function FullscreenLoading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
+      <div className="text-sm text-white/70">Cargando...</div>
+    </div>
+  );
 }
 
-function RequireRole({ role, children }: { role: "admin" | "tecnico"; children: JSX.Element }) {
+function RequireAuth({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
-  if (isLoading) return <div style={{ padding: 16 }}>Cargando...</div>;
+
+  if (isLoading) return <FullscreenLoading />;
   if (!user) return <Navigate to="/login" replace />;
 
-  const r = user.rol ?? "tecnico";
-  if (r !== role) return <Navigate to={r === "admin" ? "/admin" : "/tecnico"} replace />;
-  return children;
+  return <>{children}</>;
 }
 
-function IndexRedirect() {
+function RedirectByRole() {
   const { user, isLoading } = useAuth();
-  if (isLoading) return <div style={{ padding: 16 }}>Cargando...</div>;
+
+  if (isLoading) return <FullscreenLoading />;
   if (!user) return <Navigate to="/login" replace />;
-  return <Navigate to={(user.rol ?? "tecnico") === "admin" ? "/admin" : "/tecnico"} replace />;
+
+  return <Navigate to={user.rol === "admin" ? "/admin" : "/tecnico"} replace />;
 }
 
 export function AppRouter() {
@@ -34,25 +35,26 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<IndexRedirect />} />
+        <Route path="/" element={<RedirectByRole />} />
 
         <Route
           path="/admin"
           element={
-            <RequireRole role="admin">
-              <AdminPanelPage />
-            </RequireRole>
+            <RequireAuth>
+              <DashboardPage />
+            </RequireAuth>
           }
         />
 
         <Route
           path="/tecnico"
           element={
-            <RequireRole role="tecnico">
-              <TecnicoPanelPage />
-            </RequireRole>
+            <RequireAuth>
+              <DashboardPage />
+            </RequireAuth>
           }
         />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

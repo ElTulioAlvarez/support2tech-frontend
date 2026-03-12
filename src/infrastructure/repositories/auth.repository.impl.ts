@@ -12,6 +12,13 @@ type LoginResponse = {
   user: { id: string; email?: string | null };
 };
 
+type AuthMeResponse = {
+  user: {
+    sub: string;
+    email?: string | null;
+  };
+};
+
 type ProfileResponse = {
   id: string;
   nombre: string | null;
@@ -30,9 +37,7 @@ export class AuthRepositoryImpl implements AuthRepository {
 
     tokenStorage.set(data.access_token);
 
-    // 🔑 Tras login, carga perfil (rol) para decidir navegación y permisos.
-    // Si el perfil no existe, el backend responderá 403.
-    const profile = await this.me();
+    const user = await this.me();
 
     return {
       accessToken: data.access_token,
@@ -40,25 +45,29 @@ export class AuthRepositoryImpl implements AuthRepository {
       expiresIn: data.expires_in,
       tokenType: data.token_type,
       user: {
-        id: data.user.id,
-        email: data.user.email,
-        nombre: profile.nombre ?? null,
-        rol: profile.rol ?? "tecnico",
-        telefono: profile.telefono ?? null,
-        estado: profile.estado ?? "activo",
+        id: user.id || data.user.id,
+        email: user.email ?? data.user.email ?? null,
+        nombre: user.nombre ?? null,
+        rol: user.rol ?? "tecnico",
+        telefono: user.telefono ?? null,
+        estado: user.estado ?? "activo",
       },
     };
   }
 
   async me(): Promise<User> {
-    // Perfil completo (incluye rol). Requiere bearer token.
-    const p = await apiClient.request<ProfileResponse>("/api/account/me");
+    const [profile, auth] = await Promise.all([
+      apiClient.request<ProfileResponse>("/api/account/me"),
+      apiClient.request<AuthMeResponse>("/auth/me"),
+    ]);
+
     return {
-      id: p.id,
-      nombre: p.nombre,
-      rol: p.rol,
-      telefono: p.telefono,
-      estado: p.estado,
+      id: profile.id || auth.user.sub,
+      email: auth.user.email ?? null,
+      nombre: profile.nombre,
+      rol: profile.rol,
+      telefono: profile.telefono,
+      estado: profile.estado,
     };
   }
 
