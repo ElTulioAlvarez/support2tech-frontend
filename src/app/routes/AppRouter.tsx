@@ -1,8 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import type { ReactNode } from "react";
 import { useAuth } from "../providers/AuthProvider";
 import { LoginPage } from "../../presentation/pages/LoginPage";
 import { DashboardPage } from "../../presentation/pages/DashboardPage";
-import type { ReactNode } from "react";
+import { UsersCrudPage } from "../../presentation/pages/admin/UsersCrudPage";
 
 function FullscreenLoading() {
   return (
@@ -19,6 +20,18 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (!user) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
+}
+
+function RequireRole(props: { role: "admin" | "tecnico"; children: ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) return <FullscreenLoading />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.rol !== props.role) {
+    return <Navigate to={user.rol === "admin" ? "/admin" : "/tecnico"} replace />;
+  }
+
+  return <>{props.children}</>;
 }
 
 function RedirectByRole() {
@@ -41,7 +54,20 @@ export function AppRouter() {
           path="/admin"
           element={
             <RequireAuth>
-              <DashboardPage />
+              <RequireRole role="admin">
+                <DashboardPage />
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/admin/usuarios"
+          element={
+            <RequireAuth>
+              <RequireRole role="admin">
+                <UsersCrudPage />
+              </RequireRole>
             </RequireAuth>
           }
         />
@@ -50,7 +76,9 @@ export function AppRouter() {
           path="/tecnico"
           element={
             <RequireAuth>
-              <DashboardPage />
+              <RequireRole role="tecnico">
+                <DashboardPage />
+              </RequireRole>
             </RequireAuth>
           }
         />

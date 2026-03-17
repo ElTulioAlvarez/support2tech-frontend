@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { AppShell } from "../../layouts/AppShell";
 import { useAuth } from "../../../app/providers/AuthProvider";
 
@@ -43,8 +44,17 @@ export function AdminPanelPage() {
             Vista administrativa
           </h2>
           <p className="mt-2 text-white/65">
-            Aquí irá la lógica del dashboard para administración.
+            Ya puedes administrar usuarios técnicos desde el módulo de usuarios.
           </p>
+
+          <div className="mt-5">
+            <Link
+              to="/admin/usuarios"
+              className="inline-flex h-12 items-center justify-center rounded-2xl bg-[#db9000] px-5 text-sm font-semibold text-black transition hover:bg-[#c98200]"
+            >
+              Ir a usuarios
+            </Link>
+          </div>
         </div>
       </div>
     </AppShell>
