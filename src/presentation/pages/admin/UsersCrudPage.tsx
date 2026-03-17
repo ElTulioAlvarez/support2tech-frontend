@@ -2,13 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../layouts/AppShell";
 import { apiClient } from "../../../infrastructure/http/apiClient";
 
-type Technician = {
+type UserRole = "admin" | "tecnico";
+type UserStatus = "activo" | "inactivo";
+
+type UserItem = {
   id: string;
+  email: string;
   nombre: string | null;
   telefono: string | null;
-  estado: string;
+  rol: UserRole;
+  estado: UserStatus;
   createdAt: string | null;
-  pendingTasks: number;
 };
 
 type PaginatedResponse<T> = {
@@ -25,32 +29,37 @@ type OkResponse<T> = {
   data: T;
 };
 
-type TechnicianForm = {
-  id: string;
+type UserForm = {
+  email: string;
+  password: string;
   nombre: string;
   telefono: string;
-  estado: string;
+  rol: UserRole;
+  estado: UserStatus;
 };
 
-const INITIAL_FORM: TechnicianForm = {
-  id: "",
+const INITIAL_FORM: UserForm = {
+  email: "",
+  password: "",
   nombre: "",
   telefono: "",
+  rol: "tecnico",
   estado: "activo",
 };
 
 export function UsersCrudPage() {
-  const [items, setItems] = useState<Technician[]>([]);
+  const [items, setItems] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("");
+  const [rolFilter, setRolFilter] = useState("");
 
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Technician | null>(null);
-  const [form, setForm] = useState<TechnicianForm>(INITIAL_FORM);
+  const [editing, setEditing] = useState<UserItem | null>(null);
+  const [form, setForm] = useState<UserForm>(INITIAL_FORM);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -69,9 +78,13 @@ export function UsersCrudPage() {
 
       if (query.trim()) params.set("q", query.trim());
       if (estadoFilter) params.set("estado", estadoFilter);
+      if (rolFilter) params.set("rol", rolFilter);
 
-      const res = await apiClient.request<PaginatedResponse<Technician>>(
-        `/api/technicians?${params.toString()}`
+      const res = await apiClient.request<PaginatedResponse<UserItem>>(
+        `/api/users?${params.toString()}`,
+        {
+          autoLogoutOn401: true,
+        },
       );
 
       setItems(res.items);
@@ -93,13 +106,15 @@ export function UsersCrudPage() {
     setOpen(true);
   }
 
-  function openEdit(item: Technician) {
+  function openEdit(item: UserItem) {
     setEditing(item);
     setForm({
-      id: item.id,
+      email: item.email ?? "",
+      password: "",
       nombre: item.nombre ?? "",
       telefono: item.telefono ?? "",
-      estado: item.estado ?? "activo",
+      rol: item.rol,
+      estado: item.estado,
     });
     setOpen(true);
   }
@@ -110,7 +125,7 @@ export function UsersCrudPage() {
     setForm(INITIAL_FORM);
   }
 
-  function updateForm<K extends keyof TechnicianForm>(key: K, value: TechnicianForm[K]) {
+  function updateForm<K extends keyof UserForm>(key: K, value: UserForm[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -121,24 +136,40 @@ export function UsersCrudPage() {
       setSaving(true);
       setError(null);
 
-      const payload = {
-        ...(editing ? {} : { id: form.id.trim() }),
-        nombre: form.nombre.trim() || null,
-        telefono: form.telefono.trim() || null,
-        estado: form.estado,
-      };
-
       if (editing) {
-        await apiClient.request<OkResponse<Technician>>(`/api/technicians/${editing.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        });
+        const payload = {
+          nombre: form.nombre.trim() || null,
+          telefono: form.telefono.trim() || null,
+          rol: form.rol,
+          estado: form.estado,
+        };
+
+        await apiClient.request<OkResponse<UserItem>>(
+          `/api/users/${editing.id}`,
+          {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          },
+        );
       } else {
-        if (!form.id.trim()) {
-          throw new Error("El ID del usuario es requerido");
+        const payload = {
+          email: form.email.trim().toLowerCase(),
+          password: form.password.trim(),
+          nombre: form.nombre.trim() || null,
+          telefono: form.telefono.trim() || null,
+          rol: form.rol,
+          estado: form.estado,
+        };
+
+        if (!payload.email) {
+          throw new Error("El email es requerido");
         }
 
-        await apiClient.request<OkResponse<Technician>>("/api/technicians", {
+        if (!payload.password) {
+          throw new Error("La contraseña es requerida");
+        }
+
+        await apiClient.request<OkResponse<UserItem>>("/api/users", {
           method: "POST",
           body: JSON.stringify(payload),
         });
@@ -161,9 +192,12 @@ export function UsersCrudPage() {
       setDeletingId(id);
       setError(null);
 
-      await apiClient.request<OkResponse<{ deleted: true; id: string }>>(`/api/technicians/${id}`, {
-        method: "DELETE",
-      });
+      await apiClient.request<OkResponse<{ deleted: true; id: string }>>(
+        `/api/users/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       await loadUsers();
     } catch (e: any) {
@@ -186,9 +220,11 @@ export function UsersCrudPage() {
                 CRUD de usuarios
               </h2>
               <p className="mt-2 max-w-3xl text-sm text-white/65">
-                Esta pantalla está acoplada al backend actual vía{" "}
-                <span className="font-medium text-white">/api/technicians</span>.
-                Administra perfiles técnicos del sistema.
+                Esta pantalla ahora está acoplada al backend vía{" "}
+                <span className="font-medium text-white">/api/users</span> y
+                administra cuentas reales del sistema para roles{" "}
+                <span className="font-medium text-white">admin</span> y{" "}
+                <span className="font-medium text-white">tecnico</span>.
               </p>
             </div>
 
@@ -203,15 +239,28 @@ export function UsersCrudPage() {
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-[#101010] p-5">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div>
               <label className="mb-2 block text-sm text-white/70">Buscar</label>
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="ID, nombre o teléfono"
+                placeholder="Email, nombre, teléfono o ID"
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-[#db9700]/50"
               />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm text-white/70">Rol</label>
+              <select
+                value={rolFilter}
+                onChange={(e) => setRolFilter(e.target.value)}
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-[#db9700]/50"
+              >
+                <option value="">Todos</option>
+                <option value="admin">Admin</option>
+                <option value="tecnico">Técnico</option>
+              </select>
             </div>
 
             <div>
@@ -245,34 +294,62 @@ export function UsersCrudPage() {
           </div>
         )}
 
-        <div className="rounded-3xl border border-white/10 bg-[#101010] p-0 overflow-hidden">
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#101010] p-0">
           <div className="border-b border-white/10 px-5 py-4">
-            <div className="text-sm font-medium text-white/80">Usuarios registrados</div>
+            <div className="text-sm font-medium text-white/80">
+              Usuarios registrados
+            </div>
           </div>
 
           {loading ? (
-            <div className="px-5 py-8 text-sm text-white/55">Cargando usuarios...</div>
+            <div className="px-5 py-8 text-sm text-white/55">
+              Cargando usuarios...
+            </div>
           ) : items.length === 0 ? (
-            <div className="px-5 py-8 text-sm text-white/55">No hay usuarios para mostrar.</div>
+            <div className="px-5 py-8 text-sm text-white/55">
+              No hay usuarios para mostrar.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left">
                 <thead className="bg-black/20 text-xs uppercase tracking-[0.12em] text-white/45">
                   <tr>
                     <th className="px-5 py-4">ID</th>
+                    <th className="px-5 py-4">Email</th>
                     <th className="px-5 py-4">Nombre</th>
                     <th className="px-5 py-4">Teléfono</th>
+                    <th className="px-5 py-4">Rol</th>
                     <th className="px-5 py-4">Estado</th>
-                    <th className="px-5 py-4">Tareas pendientes</th>
                     <th className="px-5 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item) => (
                     <tr key={item.id} className="border-t border-white/10">
-                      <td className="px-5 py-4 text-sm text-white">{item.id}</td>
-                      <td className="px-5 py-4 text-sm text-white">{item.nombre ?? "-"}</td>
-                      <td className="px-5 py-4 text-sm text-white/80">{item.telefono ?? "-"}</td>
+                      <td className="px-5 py-4 text-sm text-white">
+                        {item.id}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-white">
+                        {item.email || "-"}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-white">
+                        {item.nombre ?? "-"}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-white/80">
+                        {item.telefono ?? "-"}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={[
+                            "rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.08em]",
+                            item.rol === "admin"
+                              ? "border border-sky-500/20 bg-sky-500/10 text-sky-300"
+                              : "border border-violet-500/20 bg-violet-500/10 text-violet-300",
+                          ].join(" ")}
+                        >
+                          {item.rol}
+                        </span>
+                      </td>
                       <td className="px-5 py-4">
                         <span
                           className={[
@@ -285,7 +362,6 @@ export function UsersCrudPage() {
                           {item.estado}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-sm text-white">{item.pendingTasks}</td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-2">
                           <button
@@ -302,7 +378,9 @@ export function UsersCrudPage() {
                             disabled={deletingId === item.id}
                             className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-200 transition hover:bg-red-500/15 disabled:opacity-60"
                           >
-                            {deletingId === item.id ? "Eliminando..." : "Eliminar"}
+                            {deletingId === item.id
+                              ? "Eliminando..."
+                              : "Eliminar"}
                           </button>
                         </div>
                       </td>
@@ -322,28 +400,51 @@ export function UsersCrudPage() {
               <div className="text-sm uppercase tracking-[0.16em] text-[#db9700]">
                 Usuarios
               </div>
-              <h3 className="mt-2 text-xl font-semibold text-white">{pageTitle}</h3>
+              <h3 className="mt-2 text-xl font-semibold text-white">
+                {pageTitle}
+              </h3>
             </div>
 
             <form onSubmit={submitForm} className="space-y-4 px-6 py-5">
               <div>
-                <label className="mb-2 block text-sm text-white/70">ID del usuario</label>
+                <label className="mb-2 block text-sm text-white/70">
+                  Email
+                </label>
                 <input
-                  value={form.id}
-                  onChange={(e) => updateForm("id", e.target.value)}
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => updateForm("email", e.target.value)}
                   disabled={!!editing}
-                  placeholder="UUID o ID existente en auth"
+                  placeholder="usuario@dominio.com"
                   className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-[#db9700]/50 disabled:opacity-60"
                 />
-                {!editing && (
+                {editing && (
                   <p className="mt-2 text-xs text-white/45">
-                    Este ID debe existir previamente en el sistema de autenticación.
+                    El email no se edita desde este formulario. Para eso
+                    conviene usar un flujo separado.
                   </p>
                 )}
               </div>
 
+              {!editing && (
+                <div>
+                  <label className="mb-2 block text-sm text-white/70">
+                    Contraseña
+                  </label>
+                  <input
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => updateForm("password", e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-[#db9700]/50"
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="mb-2 block text-sm text-white/70">Nombre</label>
+                <label className="mb-2 block text-sm text-white/70">
+                  Nombre
+                </label>
                 <input
                   value={form.nombre}
                   onChange={(e) => updateForm("nombre", e.target.value)}
@@ -353,7 +454,9 @@ export function UsersCrudPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-white/70">Teléfono</label>
+                <label className="mb-2 block text-sm text-white/70">
+                  Teléfono
+                </label>
                 <input
                   value={form.telefono}
                   onChange={(e) => updateForm("telefono", e.target.value)}
@@ -362,16 +465,38 @@ export function UsersCrudPage() {
                 />
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm text-white/70">Estado</label>
-                <select
-                  value={form.estado}
-                  onChange={(e) => updateForm("estado", e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-[#db9700]/50"
-                >
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Inactivo</option>
-                </select>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm text-white/70">
+                    Rol
+                  </label>
+                  <select
+                    value={form.rol}
+                    onChange={(e) =>
+                      updateForm("rol", e.target.value as UserRole)
+                    }
+                    className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-[#db9700]/50"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="tecnico">Técnico</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm text-white/70">
+                    Estado
+                  </label>
+                  <select
+                    value={form.estado}
+                    onChange={(e) =>
+                      updateForm("estado", e.target.value as UserStatus)
+                    }
+                    className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-[#db9700]/50"
+                  >
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
@@ -388,7 +513,11 @@ export function UsersCrudPage() {
                   disabled={saving}
                   className="h-12 rounded-2xl bg-[#db9000] px-5 text-sm font-semibold text-black transition hover:bg-[#c98200] disabled:opacity-70"
                 >
-                  {saving ? "Guardando..." : editing ? "Guardar cambios" : "Crear usuario"}
+                  {saving
+                    ? "Guardando..."
+                    : editing
+                      ? "Guardar cambios"
+                      : "Crear usuario"}
                 </button>
               </div>
             </form>
