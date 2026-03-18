@@ -5,6 +5,7 @@ import { LoginUseCase } from "../../application/use-cases/login.usecase";
 import { MeUseCase } from "../../application/use-cases/me.usecase";
 import { LogoutUseCase } from "../../application/use-cases/logout.usecase";
 import { authEvents } from "../../infrastructure/http/authEvents";
+import { tokenStorage } from "../../infrastructure/storage/tokenStorage";
 
 type AuthState = {
   user: User | null;
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const u = await meUC.execute();
       setUser(u);
     } catch {
+      tokenStorage.clear();
       setUser(null);
     }
   }
@@ -55,12 +57,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-  const off = authEvents.onUnauthorized(() => {
-    // Cierre inmediato, sin depender de refresh()
-    setUser(null);
-  });
-  return off;
-}, []);
+    const off = authEvents.onUnauthorized(() => {
+      tokenStorage.clear();
+      setUser(null);
+    });
+
+    return off;
+  }, []);
 
   const value: AuthState = { user, isLoading, login, logout, refresh };
 

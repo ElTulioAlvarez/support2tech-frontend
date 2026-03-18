@@ -65,6 +65,7 @@ export const apiClient = {
           tokenStorage.clear();
           authEvents.emitUnauthorized();
         }
+
         throw new Error("Sesión no disponible");
       }
 

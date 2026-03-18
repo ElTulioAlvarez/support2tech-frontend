@@ -33,32 +33,42 @@ export class AuthRepositoryImpl implements AuthRepository {
     const data = await apiClient.request<LoginResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+      requireAuth: false,
     });
 
     tokenStorage.set(data.access_token);
 
-    const user = await this.me();
+    try {
+      const user = await this.me();
 
-    return {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresIn: data.expires_in,
-      tokenType: data.token_type,
-      user: {
-        id: user.id || data.user.id,
-        email: user.email ?? data.user.email ?? null,
-        nombre: user.nombre ?? null,
-        rol: user.rol ?? "tecnico",
-        telefono: user.telefono ?? null,
-        estado: user.estado ?? "activo",
-      },
-    };
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in,
+        tokenType: data.token_type,
+        user: {
+          id: user.id || data.user.id,
+          email: user.email ?? data.user.email ?? null,
+          nombre: user.nombre ?? null,
+          rol: user.rol ?? "tecnico",
+          telefono: user.telefono ?? null,
+          estado: user.estado ?? "activo",
+        },
+      };
+    } catch (error) {
+      tokenStorage.clear();
+      throw error;
+    }
   }
 
   async me(): Promise<User> {
     const [profile, auth] = await Promise.all([
-      apiClient.request<ProfileResponse>("/api/account/me"),
-      apiClient.request<AuthMeResponse>("/auth/me"),
+      apiClient.request<ProfileResponse>("/api/account/me", {
+        autoLogoutOn401: true,
+      }),
+      apiClient.request<AuthMeResponse>("/auth/me", {
+        autoLogoutOn401: true,
+      }),
     ]);
 
     return {
